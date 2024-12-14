@@ -32,6 +32,19 @@
 #define PEDAL_MAX 825
 
 /* Type definitions */
+enum control_mode {
+  GRAN_TURISMO,
+  FORZA,
+  X,
+  N_MODES
+};
+
+struct control { /* 3-pos switch */
+  uint8_t pin1;
+  uint8_t pin2;
+  enum control_mode mode;
+};
+
 enum analog_type {
   TRIGGER,
   JOYSTICK
@@ -53,6 +66,9 @@ struct digital {
   unsigned long t_rising;
 };
 
+/* Globals */
+struct control ctrl = {8, 9, GRAN_TURISMO};
+
 struct analog aio[] = {
   {A0, JOY_LEFT,      0,  JOYSTICK},
   {A1, TRIGGER_LEFT,  0,  TRIGGER},
@@ -60,14 +76,23 @@ struct analog aio[] = {
 };
 uint8_t n_aio = sizeof(aio) / sizeof(struct analog);
 
-struct digital dio[] = { /* TODO: conditional mapping via 3-pos switch */
-  {3, BUTTON_B,     false, 0, false, 0},
-  {4, BUTTON_X,     false, 0, false, 0},
-  {5, BUTTON_START, false, 0, false, 0},
-  {6, BUTTON_BACK,  false, 0, false, 0}
+struct digital dio[N_MODES][4] = {
+  /* GRAN_TURISMO */
+  {{3, BUTTON_B,     false, 0, false, 0},
+   {4, BUTTON_X,     false, 0, false, 0},
+   {5, BUTTON_START, false, 0, false, 0},
+   {6, BUTTON_BACK,  false, 0, false, 0}
+  },
+  /* FORZA */
+  {{3, BUTTON_B,     false, 0, false, 0},
+   {4, BUTTON_X,     false, 0, false, 0},
+   {5, BUTTON_START, false, 0, false, 0},
+   {6, BUTTON_BACK,  false, 0, false, 0}
+  },
+  /* X */
+  {}
 };
-uint8_t n_dio = sizeof(dio) / sizeof(struct digital);
-
+uint8_t n_dio = sizeof(dio[0]) / sizeof(dio[0][0]);
 
 
 void setup() {
@@ -77,15 +102,28 @@ void setup() {
 
   /* Digital */
   for (int i = 0; i < n_dio; i++) {
-    pinMode(dio[i].pin, INPUT_PULLUP);
+    pinMode(dio[ctrl.mode][i].pin, INPUT_PULLUP);
   }
+  pinMode(ctrl.pin1, INPUT_PULLUP);
+  pinMode(ctrl.pin2, INPUT_PULLUP);
 
   XInput.begin();
 }
 
 
-
 void loop() {
+  /* Control */
+  bool left = !digitalRead(ctrl.pin1);
+  bool right = !digitalRead(ctrl.pin2);
+  bool center = !(left || right);
+  if (left)
+    ctrl.mode = GRAN_TURISMO;
+  else if (center)
+    ctrl.mode = FORZA;
+  else
+    ctrl.mode = X;
+
+
   /* Analog */
   for (int i = 0; i < n_aio; i++) {
     struct analog input = aio[i];
@@ -112,7 +150,7 @@ void loop() {
 
   /* Digital */
   for (int i = 0; i < n_dio; i++) {
-    struct digital btn = dio[i];
+    struct digital btn = dio[ctrl.mode][i];
     btn.pressed = !digitalRead(btn.pin);
 
     if (btn.pressed && !btn.rising) {
