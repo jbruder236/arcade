@@ -23,97 +23,119 @@
  * THE SOFTWARE.
  *
  */
+
 #include <XInput.h>
-// Input Pins
-const uint8_t a0 = A0;
-const uint8_t a1 = A1;
-const uint8_t a2 = A2;
 
-const uint8_t d3  = 3;
-const uint8_t d4  = 4;
-const uint8_t d5  = 5;
-const uint8_t d6  = 6;
+/* Configuration */
+#define DEBOUNCE_MS 50;
+#define PEDAL_MAX 825;
 
-// Analog Input Range
-const int AnalogRead_Max = 825;
-void setup() {
-	// Set input pin modes
-	pinMode(d3, INPUT_PULLUP);
-	pinMode(d4, INPUT_PULLUP);
-  pinMode(d5, INPUT_PULLUP);
-  pinMode(d6, INPUT_PULLUP);
-
-	// Setup library
-  XInput.setTriggerRange(0, AnalogRead_Max);
-  XInput.setJoystickRange(-350, 350);
-	XInput.begin();
+/* Type definitions */
+enum analog_type = {
+  TRIGGER,
+  JOYSTICK
 }
 
-unsigned long initialPress = 0;
-boolean depressed = false;
+struct analog {
+  uint8_t pin;
+  enum XInputControl control;
+  int val;
+  enum analog_type type;
+}
+
+struct digital {
+  uint8_t pin;
+  enum XInputControl control;
+  bool pressed = false;
+  time_t t_pressed = 0;
+  bool rising = false;
+  time_t t_rising = 0;
+}
+
+struct analog aio[] = {
+  {A0, JOY_LEFT,      0,  JOYSTICK},
+  {A1, TRIGGER_LEFT,  0,  TRIGGER},
+  {A2, TRIGGER_RIGHT, 0,  TRIGGER}
+}
+uint8_t n_aio = sizeof(aio) / sizeof(struct analog);
+
+struct digital dio[] = { /* TODO: conditional mapping via 3-pos switch */
+  {3, BUTTON_B,     false, 0, false, 0},
+  {4, BUTTON_X,     false, 0, false, 0},
+  {5, BUTTON_START, false, 0, false, 0},
+  {6, BUTTON_BACK,  false, 0, false, 0}
+}
+uint8_t n_dio = sizeof(dio) / sizeof(struct digital);
+
+
+
+void setup() {
+  /* Analog */
+  XInput.setTriggerRange(0, PEDAL_MAX);
+  XInput.setJoystickRange(-350, 350);
+
+  /* Digital */
+  for (int i = 0; i < n_dio; i++) {
+    pinMode(dio[i].pin, INPUT_PULLUP);
+  }
+
+  XInput.begin();
+}
+
+
 
 void loop() {
-	// Read pin states
-	boolean press_d3 = !digitalRead(d3);
-  boolean press_d4 = !digitalRead(d4);
-  boolean press_d5 = !digitalRead(d5);
-  boolean press_d6 = !digitalRead(d6);
+  /* Analog */
+  for (int i = 0; i < n_aio; i++) {
+    struct analog input = aio[i];
+    input.val = analogRead(input.pin);
 
-	int joy_a0 = analogRead(a0);
-  int joy_a1 = analogRead(a1);
-  int joy_a2 = analogRead(a2);
-  
-	// Set button and trigger states
-	XInput.setButton(BUTTON_B, press_d3);
+    switch(input.type) {
+      case TRIGGER:
+      XInput.setTrigger(input.control, input.val);
+      break;
 
-  //TODO: button debouncing on d4
-  XInput.setButton(BUTTON_X, press_d4);
-  XInput.setButton(BUTTON_START, press_d5);
-  XInput.setButton(BUTTON_BACK, press_d6);
-
-  XInput.setTrigger(TRIGGER_LEFT, joy_a1);
-  XInput.setTrigger(TRIGGER_RIGHT, joy_a2);
-
-  int scaledValue = map(joy_a0, 0, 1023, -500, 500);
-  scaledValue -= 12.5; //Error correction
-  if (scaledValue >= 0) {
-    scaledValue = map(scaledValue, 0, 500, 120, 500);
-  }
-  else {
-    scaledValue = map(scaledValue, -500, 0, -500, -120);
-  }
-	XInput.setJoystick(JOY_LEFT, scaledValue, 0);  // move x, leave y centered
-
-
-
-  // Time-based condition
-  if (press_d4) {
-    if (!depressed) {
-      initialPress = millis(); // Record the start time
-      depressed = true;
-    }
-
-    // Check if the time duration has passed (0.2 seconds = 200 milliseconds)
-    else if (millis() - initialPress >= 300) {
-      //XInput.setButton(BUTTON_A, true);
-      XInput.setButton(BUTTON_A, true);
+      case JOYSTICK:
+      input.val = map(input.val, 0, 1023, -500, 500);
+      input.val -= 12.5;  //Error correction
+      if (input.val >= 0) {
+        input.val = map(input.val, 0, 500, 120, 500);
+      } else {
+        input.val = map(input.val, -500, 0, -500, -120);
+      }
+      XInput.setJoystick(input.control, input.val, 0);
+      break;
     }
   }
-  else {
-    XInput.setButton(BUTTON_A, false);
-    depressed = false;
+
+
+  /* Digital */
+  for (int i = 0; i < n_dio; i++) {
+    struct digital btn = dio[i];
+    btn.pressed = !digitalRead(btn.pin);
+
+    if (btn.pressed && !btn.rising) {
+      /* rising edge */
+      btn.t_pressed = millis();
+      btn.rising = true;
+    }
+    else if (btn.pressed && (millis() - btn.t_rising >= DEBOUNCE_MS)) {
+      /* active */
+      XInput.setButton(btn.control, true);
+    }
+    else {
+      /* falling edge */
+      XInput.setButton(btn.control, false);
+      btn.rising = false;
+    }
   }
 
 
-
-  
-	// // Get rumble value
-	// uint16_t rumble = XInput.getRumble();
-	// // If controller is rumbling, turn on LED
-	// if (rumble > 0) {
-	// 	digitalWrite(Pin_LED, HIGH);
-	// }
-	// else {
-	// 	digitalWrite(Pin_LED, LOW);
-	// }
+  /* Rumble control
+  uint16_t rumble = XInput.getRumble();
+  if (rumble > 0)
+  	digitalWrite(Pin_LED, HIGH);
+  else
+  	digitalWrite(Pin_LED, LOW);
+  */
 }
