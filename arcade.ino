@@ -24,39 +24,40 @@
  *
  */
 
+#include <Arduino.h>
 #include <XInput.h>
 
 /* Configuration */
-#define DEBOUNCE_MS 50;
-#define PEDAL_MAX 825;
+#define DEBOUNCE_MS 50
+#define PEDAL_MAX 825
 
 /* Type definitions */
-enum analog_type = {
+enum analog_type {
   TRIGGER,
   JOYSTICK
-}
+};
 
 struct analog {
   uint8_t pin;
   enum XInputControl control;
   int val;
   enum analog_type type;
-}
+};
 
 struct digital {
   uint8_t pin;
   enum XInputControl control;
-  bool pressed = false;
-  time_t t_pressed = 0;
-  bool rising = false;
-  time_t t_rising = 0;
-}
+  bool pressed;
+  unsigned long t_pressed;
+  bool rising;
+  unsigned long t_rising;
+};
 
 struct analog aio[] = {
   {A0, JOY_LEFT,      0,  JOYSTICK},
   {A1, TRIGGER_LEFT,  0,  TRIGGER},
   {A2, TRIGGER_RIGHT, 0,  TRIGGER}
-}
+};
 uint8_t n_aio = sizeof(aio) / sizeof(struct analog);
 
 struct digital dio[] = { /* TODO: conditional mapping via 3-pos switch */
@@ -64,7 +65,7 @@ struct digital dio[] = { /* TODO: conditional mapping via 3-pos switch */
   {4, BUTTON_X,     false, 0, false, 0},
   {5, BUTTON_START, false, 0, false, 0},
   {6, BUTTON_BACK,  false, 0, false, 0}
-}
+};
 uint8_t n_dio = sizeof(dio) / sizeof(struct digital);
 
 
