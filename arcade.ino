@@ -126,7 +126,7 @@ void loop() {
 
   /* Analog */
   for (int i = 0; i < n_aio; i++) {
-    struct analog input = aio[i];
+    struct analog &input = aio[i];
     input.val = analogRead(input.pin);
 
     switch(input.type) {
@@ -150,7 +150,7 @@ void loop() {
 
   /* Digital */
   for (int i = 0; i < n_dio; i++) {
-    struct digital btn = dio[ctrl.mode][i];
+    struct digital &btn = dio[ctrl.mode][i];
     btn.pressed = !digitalRead(btn.pin);
 
     if (btn.pressed && !btn.rising) {
