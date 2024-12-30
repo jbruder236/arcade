@@ -97,7 +97,7 @@ uint8_t n_dio = sizeof(dio[0]) / sizeof(dio[0][0]);
 
 void setup() {
   /* Analog */
-  XInput.setTriggerRange(0, PEDAL_MAX);
+  XInput.setTriggerRange(42, PEDAL_MAX);
   XInput.setJoystickRange(-350, 350);
 
   /* Digital */
@@ -138,9 +138,9 @@ void loop() {
       input.val = map(input.val, 0, 1023, -500, 500);
       input.val -= 12.5;  //Error correction
       if (input.val >= 0) {
-        input.val = map(input.val, 0, 500, 120, 500);
+        input.val = map(input.val, 0, 500, 60, 500);
       } else {
-        input.val = map(input.val, -500, 0, -500, -120);
+        input.val = map(input.val, -500, 0, -500, -60);
       }
       XInput.setJoystick(input.control, input.val, 0);
       break;
