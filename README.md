@@ -1,6 +1,8 @@
 # arcade
 Sega Rally Arcade XInput Arduino Mapping
 
+https://github.com/dmadison/ArduinoXInput/blob/master/src/XInput.h
+
 
 ## TODO
 - Menu ctrl mode (^/</>/Back/Enter/Start/)
