@@ -35,7 +35,7 @@
 enum control_mode {
   GRAN_TURISMO,
   FORZA,
-  X,
+  MENU,
   N_MODES
 };
 
@@ -78,10 +78,10 @@ uint8_t n_aio = sizeof(aio) / sizeof(struct analog);
 
 struct digital dio[N_MODES][4] = {
   /* GRAN_TURISMO */
-  {{3, BUTTON_B,     false, 0, false, 0},
-   {4, BUTTON_X,     false, 0, false, 0},
-   {5, BUTTON_START, false, 0, false, 0},
-   {6, BUTTON_BACK,  false, 0, false, 0}
+  {{3, BUTTON_B,     false, 0, false, 0}, //Downshift
+   {4, BUTTON_X,     false, 0, false, 0}, //Upshift
+   {5, BUTTON_START, false, 0, false, 0}, //Start
+   {6, BUTTON_BACK,  false, 0, false, 0}  //View Change
   },
   /* FORZA */
   {{3, BUTTON_B,     false, 0, false, 0},
@@ -89,8 +89,12 @@ struct digital dio[N_MODES][4] = {
    {5, BUTTON_START, false, 0, false, 0},
    {6, BUTTON_BACK,  false, 0, false, 0}
   },
-  /* X */
-  {}
+  /* MENU */
+  {{3, DPAD_UP,       false, 0, false, 0},
+   {4, DPAD_DOWN,     false, 0, false, 0},
+   {5, BUTTON_A,      false, 0, false, 0},
+   {6, BUTTON_B,      false, 0, false, 0}
+  }
 };
 uint8_t n_dio = sizeof(dio[0]) / sizeof(dio[0][0]);
 
@@ -121,7 +125,10 @@ void loop() {
   else if (center)
     ctrl.mode = FORZA;
   else
-    ctrl.mode = X;
+    ctrl.mode = MENU;
+
+  /* Force mode */
+  ctrl.mode = MENU;
 
 
   /* Analog */
